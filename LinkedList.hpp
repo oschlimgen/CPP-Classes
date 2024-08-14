@@ -14,19 +14,164 @@ private:
   node* last;
   int length;
 
-  node* findNode(const int& index) {
+  void _clear() {
+    node* p = first;
+    node* nextp;
+    for(int i = 0; i < length; ++i) {
+      nextp = p->next;
+      delete p;
+      p = nextp;
+    }
+    first = nullptr;
+    last = nullptr;
+    length = 0;
+  }
+
+  node* _findNode(const int& index) {
     node* p = first;
     for(int i = 0; i < index; ++i) {
       p = p->next;
     }
     return p;
   }
-  const node* findNode(const int& index) const {
+  const node* _findNode(const int& index) const {
     node* p = first;
     for(int i = 0; i < index; ++i) {
       p = p->next;
     }
     return p;
+  }
+
+  void _resize(const int& size, const T* const value) {
+    if(length > size) {
+      if(size <= 0) {
+        _clear();
+      } else {
+        node* p = first;
+        for(int i = 0; i < size - 1; ++i) {
+          p = p->next;
+        }
+        last = p;
+
+        node* nextp;
+        nextp = p->next;
+        p->next = nullptr;
+        for(int i = size; i < length; ++i) {
+          p = nextp;
+          nextp = p->next;
+          delete p;
+        }
+
+        length = size;
+      }
+    } else if(length < size) {
+      node* p = last;
+
+      if(value == nullptr) {
+        for(int i = length - 1; i < size - 1; ++i) {
+          p->next = new node;
+          p = p->next;
+        }
+      } else {
+        for(int i = length - 1; i < size - 1; ++i) {
+          p->next = new node(new T(*value));
+          p = p->next;
+        }
+      }
+
+      last = p;
+      length = size;
+    }
+  }
+
+  void _add(T* const value) {
+    if(length == 0) {
+      first = new node(value);
+      last = first;
+      length++;
+    } else {
+      last->next = new node(value);
+      last = last->next;
+      length++;
+    }
+  }
+
+  void _insert(const int& index, T* const value) {
+    if(index == length) {
+      _add(value);
+    } else if(index == 0) {
+      first = new node(value, first);
+      length++;
+    } else {
+      node* p = first;
+      for(int i = 0; i < index - 1; ++i) {
+        p = p->next;
+      }
+      p->next = new node(value, p->next);
+      length++;
+    }
+  }
+
+  void _pop() {
+    if(length == 1) {
+      // Delete the only element
+      delete first;
+      first = nullptr;
+      last = nullptr;
+      length = 0;
+    } else if(length > 1) {
+      // Delete the last element
+      delete last;
+      length--;
+
+      // Find the new last element
+      last = _findNode(length - 1);
+
+      // Clear its now-deleted next node
+      last->next = nullptr;
+    }
+  }
+
+/*
+  void _remove(const int& index) {
+    if(index == length - 1) {
+      _pop();
+    } else if(index == 0) {
+      node* nextp = first->next;
+      delete first;
+      first = nextp;
+      length--;
+    } else {
+      node* p = first;
+      for(int i = 0; i < index - 1; ++i) {
+        p = p->next;
+      }
+
+      node* nextp = p->next->next;
+      delete p->next;
+      p->next = nextp;
+      length--;
+    }
+  } */
+  void _remove(node*& ptr) {
+    if(ptr == last) {
+      _pop();
+      ptr = nullptr;
+      return;
+    }
+
+    node* p = ptr->next;
+    if(p == last) {
+      last = ptr;
+    }
+
+    delete ptr->value;
+    ptr->value = p->value;
+    ptr->next = p->next;
+
+    p->value = nullptr;
+    delete p;
+    length--;
   }
 
 public:
@@ -61,7 +206,7 @@ public:
     }
 
     // Resize
-    resize(other.length);
+    _resize(other.length, nullptr);
 
     // Assign values
     node* thisp = first;
@@ -92,10 +237,10 @@ public:
   iterator end() { return nullptr; }
   const_iterator end() const { return nullptr; }
 
-  int size() const { return length; }
+  constexpr int size() const { return length; }
 
-  T& operator[](const int& index) { return *findNode(index)->value; }
-  const T& operator[](const int& index) const { return *findNode(index)->value; }
+  T& operator[](const int& index) { return *_findNode(index)->value; }
+  const T& operator[](const int& index) const { return *_findNode(index)->value; }
 
   T& at(const int& index) {
     if(index < 0 || index >= length) {
@@ -110,143 +255,51 @@ public:
     return operator[](index);
   }
 
-  T& back() noexcept { return *last->value; }
-  const T& back() const noexcept { return *last->value; }
+  T& back() { return *last->value; }
+  const T& back() const { return *last->value; }
 
-  void clear() {
-    node* p = first;
-    node* nextp;
-    for(int i = 0; i < length; ++i) {
-      nextp = p->next;
-      delete p;
-      p = nextp;
-    }
-    first = nullptr;
-    last = nullptr;
-    length = 0;
-  }
+  void clear() { _clear(); }
 
-  void resize(const int& size, const T& value) {
-    if(length > size) {
-      if(size <= 0) {
-        clear();
-      } else {
-        node* p = first;
-        for(int i = 0; i < size - 1; ++i) {
-          p = p->next;
-        }
-        last = p;
+  void resize(const int& size) { _resize(size, nullptr); }
+  void resize(const int& size, const T& value) { _resize(size, &value); }
 
-        node* nextp;
-        nextp = p->next;
-        p->next = nullptr;
-        for(int i = size; i < length; ++i) {
-          p = nextp;
-          nextp = p->next;
-          delete p;
-        }
-
-        length = size;
-      }
-    } else if(length < size) {
-      node* p = last;
-      for(int i = length - 1; i < size - 1; ++i) {
-        p->next = new node(new T(value));
-        p = p->next;
-      }
-
-      last = p;
-      length = size;
-    }
-  }
-  void resize(const int& size) {
-    resize(size, T());
-  }
-
-  void add(T* const value) {
-    if(length == 0) {
-      first = new node(value);
-      last = first;
-      length++;
-    } else {
-      last->next = new node(value);
-      last = last->next;
-      length++;
-    }
-  }
   void add(const T& value) {
-    add(new T(value));
+    _add(new T(value));
   }
 
-  void insert(const int& index, T* const value) {
-    if(index == length) {
-      add(value);
-    } else if(index == 0) {
-      first = new node(value, first);
-      length++;
-    } else {
-      node* p = first;
-      for(int i = 0; i < index - 1; ++i) {
-        p = p->next;
-      }
-      p->next = new node(value, p->next);
-      length++;
-    }
-  }
   void insert(const int& index, const T& value) {
     if(index < 0 || index > length) {
       throw OutOfRange(length, index);
     }
-    insert(index, new T(value));
+    _insert(index, new T(value));
   }
 
-  void pop() {
-    if(length == 1) {
-      // Delete the only element
-      delete first;
-      first = nullptr;
-      last = nullptr;
-      length = 0;
-    } else if(length > 1) {
-      // Delete the last element
-      delete last;
-      length--;
-
-      // Find the new last element
-      node* p = first;
-      for(int i = 0; i < length - 1; ++i) {
-        p = p->next;
-      }
-      last = p;
-
-      // Clear its now-deleted next node
-      p->next = nullptr;
-    }
-  }
+  void pop() { _pop(); }
 
   void remove(const int& index) {
     if(index < 0 || index >= length) {
       throw OutOfRange(length, index);
     }
+    node* p = _findNode(index);
+    _remove(p);
+  }
+  void remove(iterator& it) {
+    _remove(it.ptr);
+  }
 
-    if(index == length - 1) {
-      pop();
-    } else if(index == 0) {
-      node* nextp = first->next;
-      delete first;
-      first = nextp;
-      length--;
-    } else {
-      node* p = first;
-      for(int i = 0; i < index - 1; ++i) {
-        p = p->next;
-      }
-
-      node* nextp = p->next->next;
-      delete p->next;
-      p->next = nextp;
-      length--;
+  void transferTo(list& other) {
+    if(this == &other) {
+      return;
     }
+
+    other.clear();
+    other.first = first;
+    other.last = last;
+    other.length = length;
+    
+    first = nullptr;
+    last = nullptr;
+    length = 0;
   }
 };
 
@@ -255,7 +308,7 @@ template<typename T> struct list<T>::node {
   T* value;
   node* next;
 
-  node() : value(new T), next(nullptr) {}
+  node() : value(nullptr), next(nullptr) {}
   node(T* const value) : value(value), next(nullptr) {}
   node(T* const value, node* const next) : value(value), next(next) {}
 
@@ -281,6 +334,7 @@ template<typename T> struct list<T>::node {
 
 template<typename T> class list<T>::iterator {
   using iterator_category = std::forward_iterator_tag;
+  friend class list<T>;
 
 private:
   node* ptr;
@@ -291,34 +345,39 @@ public:
   iterator(node& n) : ptr(&n) {}
   iterator(node* const n) : ptr(n) {}
 
-  T& operator*() const noexcept { return *ptr->value; }
-  T* operator->() const noexcept { return ptr->value; }
+  T& operator*() const { return *ptr->value; }
+  T* operator->() const { return ptr->value; }
   T& value() const {
     if(ptr == nullptr) throw std::runtime_error("Trying to access null iterator.");
+    if(ptr->value == nullptr) throw std::runtime_error("Trying to access null node value.");
     return *ptr->value;
   }
 
   iterator& operator++() {
-    ptr = ptr->next;
+    if(ptr) {
+      ptr = ptr->next;
+    }
     return *this;
   }
   iterator operator++(int) {
     iterator prev = *this;
-    ptr = ptr->next;
+    if(ptr) {
+      ptr = ptr->next;
+    }
     return prev;
   }
-  iterator next() const noexcept { return iterator(ptr->next); }
+  iterator next() const { return iterator(ptr->next); }
 
-  bool operator==(const iterator& other) const noexcept { return ptr == other.ptr; }
-  bool operator<(const iterator& other) const noexcept { return ptr < other.ptr; }
-  bool operator>(const iterator& other) const noexcept { return ptr > other.ptr; }
+  bool operator==(const iterator& other) const { return ptr == other.ptr; }
+  bool operator<(const iterator& other) const { return ptr < other.ptr; }
+  bool operator>(const iterator& other) const { return ptr > other.ptr; }
 
-  operator bool() const noexcept { return ptr != nullptr; }
-  bool isnull() const noexcept { return ptr == nullptr; }
-  bool valid() const noexcept { return ptr != nullptr; }
-  bool nextValid() const noexcept { return ptr->next != nullptr; }
+  operator bool() const { return ptr != nullptr; }
+  bool isnull() const { return ptr == nullptr; }
+  bool valid() const { return ptr != nullptr; }
+  bool nextValid() const { return ptr->next != nullptr; }
 
-  void clear() const noexcept { ptr = nullptr; }
+  void clear() const { ptr = nullptr; }
 };
 
 template<typename T> class list<T>::const_iterator {
@@ -333,35 +392,40 @@ public:
   const_iterator(const node& n) : ptr(&n) {}
   const_iterator(const node* const n) : ptr(n) {}
 
-  const T& operator*() const noexcept { return *ptr->value; }
-  const T* operator->() const noexcept { return ptr->value; }
+  const T& operator*() const { return *ptr->value; }
+  const T* operator->() const { return ptr->value; }
 
   const_iterator& operator++() {
-    ptr = ptr->next;
+    if(ptr) {
+      ptr = ptr->next;
+    }
     return *this;
   }
   const_iterator operator++(int) {
     const_iterator prev = *this;
-    ptr = ptr->next;
+    if(ptr) {
+      ptr = ptr->next;
+    }
     return prev;
   }
   const_iterator next() const { return const_iterator(ptr->next); }
 
-  bool operator==(const const_iterator& other) const noexcept { return ptr == other.ptr; }
-  bool operator<(const const_iterator& other) const noexcept { return ptr < other.ptr; }
-  bool operator>(const const_iterator& other) const noexcept { return ptr > other.ptr; }
+  bool operator==(const const_iterator& other) const { return ptr == other.ptr; }
+  bool operator<(const const_iterator& other) const { return ptr < other.ptr; }
+  bool operator>(const const_iterator& other) const { return ptr > other.ptr; }
 
-  operator bool() const noexcept { return ptr != nullptr; }
-  bool isnull() const noexcept { return ptr == nullptr; }
-  bool valid() const noexcept { return ptr != nullptr; }
-  bool nextValid() const noexcept { return ptr->next != nullptr; }
+  operator bool() const { return ptr != nullptr; }
+  bool isnull() const { return ptr == nullptr; }
+  bool valid() const { return ptr != nullptr; }
+  bool nextValid() const { return ptr->next != nullptr; }
 
   const T& node() const {
     if(ptr == nullptr) throw std::runtime_error("Trying to access null iterator.");
+    if(ptr->value == nullptr) throw std::runtime_error("Trying to access null node value.");
     return *ptr->value;
   }
   
-  void clear() const noexcept { ptr = nullptr; }
+  void clear() const { ptr = nullptr; }
 };
 
 
