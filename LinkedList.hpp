@@ -132,34 +132,7 @@ private:
     }
   }
 
-/*
-  void _remove(const int& index) {
-    if(index == length - 1) {
-      _pop();
-    } else if(index == 0) {
-      node* nextp = first->next;
-      delete first;
-      first = nextp;
-      length--;
-    } else {
-      node* p = first;
-      for(int i = 0; i < index - 1; ++i) {
-        p = p->next;
-      }
-
-      node* nextp = p->next->next;
-      delete p->next;
-      p->next = nextp;
-      length--;
-    }
-  } */
-  void _remove(node*& ptr) {
-    if(ptr == last) {
-      _pop();
-      ptr = nullptr;
-      return;
-    }
-
+  void _removeExceptBack(node* const& ptr) {
     node* p = ptr->next;
     if(p == last) {
       last = ptr;
@@ -172,6 +145,14 @@ private:
     p->value = nullptr;
     delete p;
     length--;
+  }
+  void _remove(node*& ptr) {
+    if(ptr->next == nullptr) {
+      _pop();
+      ptr = nullptr;
+    } else {
+      _removeExceptBack(ptr);
+    }
   }
 
 public:
@@ -237,7 +218,7 @@ public:
   iterator end() { return nullptr; }
   const_iterator end() const { return nullptr; }
 
-  constexpr int size() const { return length; }
+  int size() const { return length; }
 
   T& operator[](const int& index) { return *_findNode(index)->value; }
   const T& operator[](const int& index) const { return *_findNode(index)->value; }
@@ -286,6 +267,13 @@ public:
   void remove(iterator& it) {
     _remove(it.ptr);
   }
+  void remove(const iterator& it) {
+    if(!it.nextValid()) {
+      _pop();
+    } else {
+      _removeExceptBack(it.ptr);
+    }
+  }
 
   void transferTo(list& other) {
     if(this == &other) {
@@ -316,7 +304,7 @@ template<typename T> struct list<T>::node {
     value = new T(*other.value);
   }
   node& operator=(const node& other) { // Deep Copy
-    if(this == &other) {
+    if(value == other.value) {
       return *this;
     }
 
@@ -339,11 +327,14 @@ template<typename T> class list<T>::iterator {
 private:
   node* ptr;
 
+  iterator(node& n) : ptr(&n) {}
+  iterator(node* const n) : ptr(n) {}
+
 public:
   iterator() : ptr(nullptr) {}
   iterator(std::nullptr_t) : ptr(nullptr) {}
-  iterator(node& n) : ptr(&n) {}
-  iterator(node* const n) : ptr(n) {}
+
+  operator const_iterator() const { return const_iterator(ptr); }
 
   T& operator*() const { return *ptr->value; }
   T* operator->() const { return ptr->value; }
@@ -352,6 +343,7 @@ public:
     if(ptr->value == nullptr) throw std::runtime_error("Trying to access null node value.");
     return *ptr->value;
   }
+  T& nextValue() const { return *ptr->next->value; }
 
   iterator& operator++() {
     if(ptr) {
@@ -372,6 +364,14 @@ public:
   bool operator<(const iterator& other) const { return ptr < other.ptr; }
   bool operator>(const iterator& other) const { return ptr > other.ptr; }
 
+  iterator operator+(const int& other) const {
+    iterator res(ptr);
+    for(int i = 0; i < other; ++i) {
+      res.ptr = res.ptr->next;
+    }
+    return res;
+  }
+
   operator bool() const { return ptr != nullptr; }
   bool isnull() const { return ptr == nullptr; }
   bool valid() const { return ptr != nullptr; }
@@ -382,15 +382,20 @@ public:
 
 template<typename T> class list<T>::const_iterator {
   using iterator_category = std::forward_iterator_tag;
+  friend class list<T>;
 
 private:
   const node* ptr;
+  
+  const_iterator(const node& n) : ptr(&n) {}
+  const_iterator(const node* const n) : ptr(n) {}
 
 public:
   const_iterator() : ptr(nullptr) {}
   const_iterator(std::nullptr_t) : ptr(nullptr) {}
-  const_iterator(const node& n) : ptr(&n) {}
-  const_iterator(const node* const n) : ptr(n) {}
+
+  const_iterator(const iterator& other) : ptr(other.ptr) {}
+  const_iterator& operator=(const iterator& other) { ptr = other.ptr; return *this; }
 
   const T& operator*() const { return *ptr->value; }
   const T* operator->() const { return ptr->value; }
