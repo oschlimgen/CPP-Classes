@@ -9,6 +9,7 @@
 template<typename T> class list {
 private:
   struct node;
+  template<typename Compare = std::less<>> class mergeSort;
 
   node* first;
   node* last;
@@ -17,7 +18,7 @@ private:
   void _clear() {
     node* p = first;
     node* nextp;
-    for(int i = 0; i < length; ++i) {
+    while(p != nullptr) {
       nextp = p->next;
       delete p;
       p = nextp;
@@ -132,7 +133,7 @@ private:
     }
   }
 
-  void _removeExceptBack(node* const& ptr) {
+  void _removeExceptBack(node* const ptr) {
     node* p = ptr->next;
     if(p == last) {
       last = ptr;
@@ -163,20 +164,19 @@ public:
   list<T>() : first(nullptr), last(nullptr), length(0) {}
 
   /* Deep Copy */
-  list<T>(const list<T>& other) : length(other.length) {
+  list<T>(const list<T>& other) : first(nullptr), last(nullptr), length(other.length) {
     if(length != 0) {
-      node* otherp = other.first;
-      first = new node(new T(*otherp->value));
-      node* thisp = first;
+      node* otherp = other.first; // Always one ahead of thisp
+      node* thisp = new node(new T(*otherp->value));
+      first = thisp;
+
       otherp = otherp->next;
       while(otherp != nullptr) {
         thisp->next = new node(new T(*otherp->value));
         thisp = thisp->next;
         otherp = otherp->next;
       }
-      last = &thisp;
-    } else {
-      first = nullptr;
+      last = thisp;
     }
   }
 
@@ -186,18 +186,36 @@ public:
       return *this;
     }
 
-    // Resize
-    _resize(other.length, nullptr);
+    // Add a first node if it doesn't have one
+    if(length == 0) {
+      first = new node;
+    }
+    // Shorten it if necessary
+    if(length > other.length) {
+      _resize(other.length, nullptr);
+    }
 
     // Assign values
     node* thisp = first;
     node* otherp = other.first;
-    while(otherp != nullptr) {
+    while(true) {
       delete thisp->value;
       thisp->value = new T(*otherp->value);
+
+      if(thisp->next == nullptr) break;
       thisp = thisp->next;
       otherp = otherp->next;
     }
+
+    // thisp->next should now be nullptr
+    otherp = otherp->next; // Set otherp to one ahead of thisp
+    while(otherp != nullptr) {
+      thisp->next = new node(new T(*otherp->value));
+      thisp = thisp->next;
+      otherp = otherp->next;
+    }
+    last = thisp;
+    length = other.length;
     
     return *this;
   }
@@ -288,6 +306,12 @@ public:
     first = nullptr;
     last = nullptr;
     length = 0;
+  }
+
+  template<typename Compare = std::less<>>
+  void sort(Compare comp = Compare()) {
+    mergeSort<Compare> s(first, comp);
+    s.sort();
   }
 };
 
@@ -449,6 +473,81 @@ public:
   virtual const char* what() const throw()
   {
     return msg.c_str();
+  }
+};
+
+
+template<typename T>
+template<typename Compare>
+class list<T>::mergeSort {
+private:
+  node** start;
+  Compare compare;
+
+  // Split the linked list into two halves
+  void _splitList(node* source, node** front, node** back) {
+    node* slow = source;
+    node* fast = source->next;
+
+    // Fast moves 2 nodes and slow moves 1 node
+    while (fast != nullptr) {
+      fast = fast->next;
+      if (fast != nullptr) {
+        slow = slow->next;
+        fast = fast->next;
+      }
+    }
+
+    *front = source;
+    *back = slow->next;
+    slow->next = nullptr;
+  }
+
+  // Merge two sorted linked lists
+  node* _mergeLists(node* a, node* b) {
+    if (a == nullptr) return b;
+    if (b == nullptr) return a;
+
+    node* result = nullptr;
+
+    if (compare(*a->value, *b->value)) {
+      result = a;
+      result->next = _mergeLists(a->next, b);
+    } else {
+      result = b;
+      result->next = _mergeLists(a, b->next);
+    }
+
+    return result;
+  }
+
+  // Main Merge Sort function
+  void _sort(node** headRef) {
+    node* head = *headRef;
+    if (head == nullptr || head->next == nullptr) {
+      return;
+    }
+
+    node* a;
+    node* b;
+
+    // Split the list into two halves
+    _splitList(head, &a, &b);
+
+    // Recursively sort the two halves
+    _sort(&a);
+    _sort(&b);
+
+    // Merge the sorted halves
+    *headRef = _mergeLists(a, b);
+  }
+
+public:
+  mergeSort(node*& start, Compare comp = Compare()) : start(&start), compare(comp) {}
+  mergeSort(list<T>& linkedlist, Compare comp = Compare()) : start(&linkedlist.first), compare(comp) {}
+
+  void sort() {
+    _sort(start);
   }
 };
 
