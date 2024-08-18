@@ -43,6 +43,10 @@ private:
     return p;
   }
 
+  node* _findLast() {
+    return _findNode(length - 1);
+  }
+
   void _resize(const int& size, const T* const value) {
     if(length > size) {
       if(size <= 0) {
@@ -312,6 +316,8 @@ public:
   void sort(Compare comp = Compare()) {
     mergeSort<Compare> s(first, comp);
     s.sort();
+
+    last = _findLast();
   }
 };
 
