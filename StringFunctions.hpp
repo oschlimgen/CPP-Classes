@@ -115,4 +115,4 @@ namespace StringFunctions {
   }
 }
 
-#endif // STRING_FUNCTIONS_HPP
+#endif /* STRING_FUNCTIONS_HPP */
