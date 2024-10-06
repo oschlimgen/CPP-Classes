@@ -334,6 +334,7 @@ public:
 
     node* head = first->next;
     first->next = nullptr;
+    last = first;
 
     node* p;
     while(head != nullptr) {
@@ -547,24 +548,24 @@ private:
   // Merge two sorted linked lists
   node* _mergeLists(node* a, node* b) {
     node* result = nullptr;
-    node** last = &result;
+    node** end = &result;
 
     while(a && b) {
       if (compare(*a->value, *b->value)) {
-        *last = a;
+        *end = a;
         a = a->next;
-        last = &(*last)->next;
+        end = &(*end)->next;
       } else {
-        *last = b;
+        *end = b;
         b = b->next;
-        last = &(*last)->next;
+        end = &(*end)->next;
       }
     }
 
     if(a == nullptr) {
-      *last = b;
+      *end = b;
     } else {
-      *last = a;
+      *end = a;
     }
 
     return result;
@@ -595,6 +596,7 @@ public:
   mergeSort(node*& start, Compare comp = Compare()) : start(&start), compare(comp) {}
   mergeSort(list<T>& linkedlist, Compare comp = Compare()) : start(&linkedlist.first), compare(comp) {}
 
+  // Sorts list. Doesn't update last element.
   void sort() {
     _sort(start);
   }
